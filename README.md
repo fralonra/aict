@@ -42,3 +42,8 @@ assert!(factory.take_up(2).is_ok());
 // However, if rewind is set to true, the next ID is 0.
 assert_eq!(factory.next().unwrap(), 3);
 ```
+
+## Similiar Crates
+
+- [serial_int](https://crates.io/crates/serial_int)
+- [autoincrement](https://crates.io/crates/autoincrement)
