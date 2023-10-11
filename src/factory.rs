@@ -4,6 +4,7 @@ use crate::{aictable::Aictable, builder::FactoryBuilder, error::Error};
 
 /// A factory for generating unique IDs of a specific type.
 pub struct Factory<T: Aictable> {
+    initial_value: T,
     looping: bool,
     rewind: bool,
 
@@ -17,11 +18,14 @@ impl<T: Aictable> Factory<T> {
     /// It's recommended to use a [`FactoryBuilder`](crate::FactoryBuilder) to build a `Factory`.
     /// See the document of `FactoryBuilder` for details.
     pub fn new(initial_value: T, looping: bool, rewind: bool) -> Self {
+        let cursor = initial_value.clone();
+
         Self {
+            initial_value,
             looping,
             rewind,
 
-            cursor: initial_value,
+            cursor,
             set: HashSet::new(),
         }
     }
@@ -86,6 +90,13 @@ impl<T: Aictable> Factory<T> {
         false
     }
 
+    /// Resets the factory to its initial state.
+    pub fn reset(&mut self) {
+        self.cursor = self.initial_value.clone();
+
+        self.set.clear();
+    }
+
     /// Manually marks the specified ID as used.
     ///
     /// # Errors
@@ -120,9 +131,13 @@ mod tests {
         factory.remove(3);
         assert!(factory.take_up(3).is_ok());
         assert_eq!(factory.next().unwrap(), 4);
+        factory.reset();
+        assert_eq!(factory.next().unwrap(), 0);
 
         factory = Factory::<u32>::builder().initial_value(1).build();
 
+        assert_eq!(factory.next().unwrap(), 1);
+        factory.reset();
         assert_eq!(factory.next().unwrap(), 1);
 
         factory = Factory::<u32>::builder().initial_value(u32::MAX).build();
