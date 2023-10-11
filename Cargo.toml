@@ -1,6 +1,6 @@
 [package]
 name = "aict"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Fralonra <zoronlivingston@gmail.com>"]
 description = "Generates auto-incrementing unique IDs"
 edition = "2021"
