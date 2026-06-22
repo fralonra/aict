@@ -3,6 +3,7 @@ name = "aict"
 version = "0.3.0"
 authors = ["Fralonra <zoronlivingston@gmail.com>"]
 description = "Generates auto-incrementing unique IDs"
+documentation = "https://docs.rs/aict"
 edition = "2021"
 homepage = "https://github.com/fralonra/aict"
 license = "MIT"
