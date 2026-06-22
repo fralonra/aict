@@ -35,6 +35,22 @@ impl<T: Aictable> Factory<T> {
         FactoryBuilder::default()
     }
 
+    /// Manually marks a list of IDs as used.
+    ///
+    /// # Errors
+    ///
+    /// - If any ID is already taken, it returns an [`Error::AlreadyExist<T>`].
+    pub fn consume<I>(&mut self, ids: I) -> Result<(), Error<T>>
+    where
+        I: IntoIterator<Item = T>,
+    {
+        for id in ids.into_iter() {
+            self.take_up(id)?;
+        }
+
+        Ok(())
+    }
+
     /// Generates and returns the next unique ID.
     ///
     /// # Errors
@@ -133,6 +149,9 @@ mod tests {
         assert_eq!(factory.next().unwrap(), 4);
         factory.reset();
         assert_eq!(factory.next().unwrap(), 0);
+        assert!(factory.consume([0, 1]).is_err());
+        assert!(factory.consume([1, 2]).is_ok());
+        assert_eq!(factory.next().unwrap(), 3);
 
         factory = Factory::<u32>::builder().initial_value(1).build();
 
