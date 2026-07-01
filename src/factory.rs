@@ -51,6 +51,11 @@ impl<T: Aictable> Factory<T> {
         Ok(())
     }
 
+    /// Checks if the specified ID is already taken.
+    pub fn is_taken(&self, id: T) -> bool {
+        self.set.contains(&id)
+    }
+
     /// Generates and returns the next unique ID.
     ///
     /// # Errors
@@ -137,9 +142,13 @@ mod tests {
     fn test_factory() {
         let mut factory = Factory::<u32>::builder().build();
 
+        assert!(!factory.is_taken(0));
         assert_eq!(factory.next().unwrap(), 0);
+        assert!(factory.is_taken(0));
         assert_eq!(factory.next().unwrap(), 1);
+        assert!(factory.is_taken(1));
         factory.remove(1);
+        assert!(!factory.is_taken(1));
         assert_eq!(factory.next().unwrap(), 2);
         assert!(factory.take_up(2).is_err());
         assert!(factory.take_up(3).is_ok());
@@ -155,6 +164,7 @@ mod tests {
 
         factory = Factory::<u32>::builder().initial_value(1).build();
 
+        assert!(!factory.is_taken(0));
         assert_eq!(factory.next().unwrap(), 1);
         factory.reset();
         assert_eq!(factory.next().unwrap(), 1);
