@@ -64,23 +64,7 @@ impl<T: Aictable> Factory<T> {
     /// - If `Factory::looping` is false and the current ID is already
     /// the maximum value of the type, it returns an [`Error::MaxReached`].
     pub fn next(&mut self) -> Result<T, Error<T>> {
-        let start = self.cursor.clone();
-
-        while self.set.contains(&self.cursor) {
-            if self.looping {
-                self.cursor = self.cursor.wrapping_next();
-
-                if self.cursor == start {
-                    return Err(Error::OutOfSpace);
-                }
-            } else {
-                self.cursor = self.cursor.saturating_next();
-
-                if self.cursor.is_max_reached() {
-                    return Err(Error::MaxReached);
-                }
-            }
-        }
+        self.cursor = self.sniff()?;
 
         self.set.insert(self.cursor.clone());
 
@@ -118,6 +102,36 @@ impl<T: Aictable> Factory<T> {
         self.set.clear();
     }
 
+    /// Returns the next unique ID without actually generating it.
+    ///
+    /// # Errors
+    ///
+    /// - If no more IDs can be generated, it returns an [`Error::OutOfSpace`].
+    /// - If `Factory::looping` is false and the current ID is already
+    /// the maximum value of the type, it returns an [`Error::MaxReached`].
+    pub fn sniff(&self) -> Result<T, Error<T>> {
+        let start = self.cursor.clone();
+        let mut next = start.clone();
+
+        while self.set.contains(&next) {
+            if self.looping {
+                next = next.wrapping_next();
+
+                if next == start {
+                    return Err(Error::OutOfSpace);
+                }
+            } else {
+                next = next.saturating_next();
+
+                if next.is_max_reached() {
+                    return Err(Error::MaxReached);
+                }
+            }
+        }
+
+        Ok(next)
+    }
+
     /// Manually marks the specified ID as used.
     ///
     /// # Errors
@@ -143,34 +157,43 @@ mod tests {
         let mut factory = Factory::<u32>::builder().build();
 
         assert!(!factory.is_taken(0));
+        assert_eq!(factory.sniff().unwrap(), 0);
         assert_eq!(factory.next().unwrap(), 0);
         assert!(factory.is_taken(0));
+        assert_eq!(factory.sniff().unwrap(), 1);
         assert_eq!(factory.next().unwrap(), 1);
         assert!(factory.is_taken(1));
         factory.remove(1);
         assert!(!factory.is_taken(1));
+        assert_eq!(factory.sniff().unwrap(), 2);
         assert_eq!(factory.next().unwrap(), 2);
         assert!(factory.take_up(2).is_err());
         assert!(factory.take_up(3).is_ok());
         assert!(factory.take_up(3).is_err());
         factory.remove(3);
         assert!(factory.take_up(3).is_ok());
+        assert_eq!(factory.sniff().unwrap(), 4);
         assert_eq!(factory.next().unwrap(), 4);
         factory.reset();
+        assert_eq!(factory.sniff().unwrap(), 0);
         assert_eq!(factory.next().unwrap(), 0);
         assert!(factory.consume([0, 1]).is_err());
         assert!(factory.consume([1, 2]).is_ok());
+        assert_eq!(factory.sniff().unwrap(), 3);
         assert_eq!(factory.next().unwrap(), 3);
 
         factory = Factory::<u32>::builder().initial_value(1).build();
 
         assert!(!factory.is_taken(0));
+        assert_eq!(factory.sniff().unwrap(), 1);
         assert_eq!(factory.next().unwrap(), 1);
         factory.reset();
+        assert_eq!(factory.sniff().unwrap(), 1);
         assert_eq!(factory.next().unwrap(), 1);
 
         factory = Factory::<u32>::builder().initial_value(u32::MAX).build();
 
+        assert_eq!(factory.sniff().unwrap(), u32::MAX);
         assert_eq!(factory.next().unwrap(), u32::MAX);
         assert!(factory.next().is_err());
 
@@ -179,21 +202,30 @@ mod tests {
             .looping(true)
             .build();
 
+        assert_eq!(factory.sniff().unwrap(), u32::MAX);
         assert_eq!(factory.next().unwrap(), u32::MAX);
+        assert_eq!(factory.sniff().unwrap(), u32::MIN);
         assert_eq!(factory.next().unwrap(), u32::MIN);
 
         factory = Factory::<u32>::builder().rewind(true).build();
 
+        assert_eq!(factory.sniff().unwrap(), 0);
         assert_eq!(factory.next().unwrap(), 0);
+        assert_eq!(factory.sniff().unwrap(), 1);
         assert_eq!(factory.next().unwrap(), 1);
         factory.remove(1);
+        assert_eq!(factory.sniff().unwrap(), 1);
         assert_eq!(factory.next().unwrap(), 1);
         factory.remove(0);
+        assert_eq!(factory.sniff().unwrap(), 0);
         assert_eq!(factory.next().unwrap(), 0);
+        assert_eq!(factory.sniff().unwrap(), 2);
         assert_eq!(factory.next().unwrap(), 2);
+        assert_eq!(factory.sniff().unwrap(), 3);
         assert_eq!(factory.next().unwrap(), 3);
         factory.remove(0);
         factory.remove(1);
+        assert_eq!(factory.sniff().unwrap(), 1);
         assert_eq!(factory.next().unwrap(), 1);
     }
 }
